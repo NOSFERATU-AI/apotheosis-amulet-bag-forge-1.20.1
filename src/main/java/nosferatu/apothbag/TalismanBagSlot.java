@@ -15,12 +15,12 @@ public class TalismanBagSlot extends Slot {
     }
 
     @Override
-    public boolean m_5857_(ItemStack stack) {
-        return this.bagContainer.m_7013_(this.bagSlot, stack);
+    public boolean mayPlace(ItemStack stack) {
+        return this.bagContainer.canPlaceItem(this.bagSlot, stack);
     }
 
     @Override
-    public boolean m_8010_(Player player) {
+    public boolean mayPickup(Player player) {
         return this.bagContainer.isSlotUnlocked(this.bagSlot);
     }
 }
