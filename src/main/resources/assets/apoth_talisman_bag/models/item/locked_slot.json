@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "apoth_talisman_bag:item/locked_slot"
+    "layer0": "apoth_talisman_bag:item/locked_slot_generated"
   }
 }
