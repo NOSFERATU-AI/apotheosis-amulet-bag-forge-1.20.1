@@ -1,19 +1,24 @@
 package nosferatu.apothbag;
 
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 public class TalismanBagContainer extends SimpleContainer {
     private final ItemStack bag;
+    private final boolean clientOnly;
     private boolean loading = false;
     private boolean refreshing = false;
 
     public TalismanBagContainer(ItemStack bag) {
         super(TalismanBagItem.MAX_SLOTS);
         this.bag = bag;
+        this.clientOnly = bag.isEmpty();
         this.loading = true;
-        TalismanBagItem.loadItems(bag, this);
-        refreshVisualState();
+        if (!this.clientOnly) {
+            TalismanBagItem.loadItems(bag, this);
+            refreshVisualState();
+        }
         this.loading = false;
     }
 
@@ -22,28 +27,29 @@ public class TalismanBagContainer extends SimpleContainer {
     }
 
     public boolean isSlotUnlocked(int index) {
+        if (this.clientOnly) return true;
         return index >= 0 && index < TalismanBagItem.getUnlockedSlots(this.bag);
     }
 
     public void setItemSilently(int index, ItemStack stack) {
-        super.m_6836_(index, stack);
+        super.setItem(index, stack);
     }
 
     public void refreshVisualState() {
-        if (this.refreshing) return;
+        if (this.clientOnly || this.refreshing) return;
         this.refreshing = true;
         try {
             int unlocked = TalismanBagItem.getUnlockedSlots(this.bag);
             for (int i = 0; i < TalismanBagItem.MAX_SLOTS; i++) {
-                ItemStack current = super.m_8020_(i);
+                ItemStack current = super.getItem(i);
                 if (i < unlocked) {
                     if (TalismanBagItem.isLockedVisual(current)) {
-                        super.m_6836_(i, ItemStack.f_41583_);
+                        super.setItem(i, ItemStack.EMPTY);
                     }
                 }
                 else {
                     if (!TalismanBagItem.isLockedVisual(current)) {
-                        super.m_6836_(i, TalismanBagItem.createLockedVisual());
+                        super.setItem(i, TalismanBagItem.createLockedVisual());
                     }
                 }
             }
@@ -54,7 +60,7 @@ public class TalismanBagContainer extends SimpleContainer {
     }
 
     @Override
-    public boolean m_7013_(int index, ItemStack stack) {
+    public boolean canPlaceItem(int index, ItemStack stack) {
         return index >= 0
                 && index < TalismanBagItem.MAX_SLOTS
                 && this.isSlotUnlocked(index)
@@ -62,15 +68,15 @@ public class TalismanBagContainer extends SimpleContainer {
     }
 
     @Override
-    public void m_6836_(int index, ItemStack stack) {
+    public void setItem(int index, ItemStack stack) {
         if (index < 0 || index >= TalismanBagItem.MAX_SLOTS) return;
 
-        if (!this.loading) {
+        if (!this.loading && !this.clientOnly) {
             if (!this.isSlotUnlocked(index)) {
-                if (!TalismanBagItem.isLockedVisual(super.m_8020_(index))) {
+                if (!TalismanBagItem.isLockedVisual(super.getItem(index))) {
                     this.refreshing = true;
                     try {
-                        super.m_6836_(index, TalismanBagItem.createLockedVisual());
+                        super.setItem(index, TalismanBagItem.createLockedVisual());
                     }
                     finally {
                         this.refreshing = false;
@@ -78,21 +84,26 @@ public class TalismanBagContainer extends SimpleContainer {
                 }
                 return;
             }
-            if (!stack.m_41619_() && !this.m_7013_(index, stack)) {
+            if (!stack.isEmpty() && !this.canPlaceItem(index, stack)) {
                 return;
             }
         }
 
         if (TalismanBagItem.isPotionCharm(stack)) {
-            stack.m_41784_().m_128379_("charm_enabled", true);
+            TalismanBagItem.enableCharm(stack);
         }
-        super.m_6836_(index, stack);
+        super.setItem(index, stack);
     }
 
     @Override
-    public void m_6596_() {
-        super.m_6596_();
-        if (!loading && !refreshing) {
+    public boolean stillValid(Player player) {
+        return true;
+    }
+
+    @Override
+    public void setChanged() {
+        super.setChanged();
+        if (!clientOnly && !loading && !refreshing) {
             TalismanBagItem.saveItems(this.bag, this);
         }
     }
