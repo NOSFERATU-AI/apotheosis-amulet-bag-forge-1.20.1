@@ -6,7 +6,7 @@ group = 'nosferatu.apothbag'
 version = '1.0.7'
 
 base {
-    archivesName = 'apotheosis_talisman_bag'
+    archivesName = 'apotheosis_amulet_bag'
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -22,6 +22,4 @@ repositories {
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.10'
-    // Для нормальной dev-сборки понадобится Apotheosis jar в ./libs
-    // Этот исходник использует runtime m_ имена, потому что jar был собран вручную под Forge runtime.
 }
