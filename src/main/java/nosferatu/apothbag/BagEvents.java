@@ -23,6 +23,12 @@ public class BagEvents {
         ItemStack offhand = player.getOffhandItem();
         if (offhand.getItem() instanceof TalismanBagItem && TalismanBagItem.hasStoredItemsFast(offhand)) {
             tickBag(player, offhand);
+            return;
+        }
+
+        ItemStack curiosBag = CuriosCompat.findFirstActiveBag(player);
+        if (!curiosBag.isEmpty()) {
+            tickBag(player, curiosBag);
         }
     }
 
