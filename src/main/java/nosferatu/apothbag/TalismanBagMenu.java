@@ -3,6 +3,7 @@ package nosferatu.apothbag;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -15,8 +16,9 @@ public class TalismanBagMenu extends AbstractContainerMenu {
 
     private final TalismanBagContainer container;
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public TalismanBagMenu(int id, Inventory playerInventory, TalismanBagContainer container) {
-        super(ApothTalismanBag.TALISMAN_BAG_MENU.get(), id);
+        super((MenuType) MenuType.HOPPER, id);
         this.container = container;
 
         for (int i = 0; i < BAG_SLOTS; i++) {
@@ -42,9 +44,9 @@ public class TalismanBagMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         ItemStack result = ItemStack.EMPTY;
-        if (index < 0 || index >= this.slots.size()) return result;
+        if (index < 0 || index >= HOTBAR_END) return result;
 
-        Slot slot = this.slots.get(index);
+        Slot slot = this.getSlot(index);
         if (slot != null && slot.hasItem()) {
             ItemStack stackInSlot = slot.getItem();
             result = stackInSlot.copy();
