@@ -1,8 +1,8 @@
 package nosferatu.apothbag;
 
-import dev.shadowsoffire.apotheosis.potion.PotionCharmItem;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -18,6 +18,7 @@ import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.network.NetworkHooks;
 
+import java.lang.reflect.Method;
 import java.util.List;
 
 public class TalismanBagItem extends Item {
@@ -25,16 +26,20 @@ public class TalismanBagItem extends Item {
     private static final String TAG_UNLOCKED = "UnlockedSlots";
     private static final String TAG_ITEMS = "Items";
 
+    private static Class<?> potionCharmItemClass;
+    private static Method potionCharmHasEffectMethod;
+    private static boolean apotheosisReflectionTried = false;
+
     public TalismanBagItem(Properties properties) {
         super(properties);
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> m_7203_(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.m_21120_(hand);
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
 
-        if (!level.m_5776_() && player instanceof ServerPlayer serverPlayer) {
-            if (player.m_6144_()) {
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+            if (player.isShiftKeyDown()) {
                 unlockNextSlot(stack, serverPlayer);
             }
             else {
@@ -42,11 +47,11 @@ public class TalismanBagItem extends Item {
             }
         }
 
-        return InteractionResultHolder.m_19092_(stack, level.m_5776_());
+        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
     }
 
     private static void openBag(ServerPlayer player, ItemStack bagStack) {
-        Component title = Component.m_237115_("container.apoth_talisman_bag.talisman_bag");
+        Component title = Component.translatable("container.apoth_talisman_bag.talisman_bag");
         MenuProvider provider = new SimpleMenuProvider((int id, Inventory inventory, Player menuPlayer) -> {
             TalismanBagContainer container = new TalismanBagContainer(bagStack);
             return new TalismanBagMenu(id, inventory, container);
@@ -57,46 +62,85 @@ public class TalismanBagItem extends Item {
     public static boolean unlockNextSlot(ItemStack stack, ServerPlayer player) {
         int unlocked = getUnlockedSlots(stack);
         if (unlocked >= MAX_SLOTS) {
-            player.m_5661_(Component.m_237115_("message.apoth_talisman_bag.all_slots_unlocked"), true);
+            player.displayClientMessage(Component.translatable("message.apoth_talisman_bag.all_slots_unlocked"), true);
             return false;
         }
 
         int cost = (unlocked + 1) * 100;
-        if (!player.m_7500_() && player.f_36078_ < cost) {
-            player.m_5661_(Component.m_237110_("message.apoth_talisman_bag.not_enough_levels", cost), true);
+        if (!player.getAbilities().instabuild && player.experienceLevel < cost) {
+            player.displayClientMessage(Component.translatable("message.apoth_talisman_bag.not_enough_levels", cost), true);
             return false;
         }
 
-        if (!player.m_7500_()) {
-            player.m_6749_(-cost);
+        if (!player.getAbilities().instabuild) {
+            player.giveExperienceLevels(-cost);
         }
 
         setUnlockedSlots(stack, unlocked + 1);
-        player.m_5661_(Component.m_237110_("message.apoth_talisman_bag.slot_unlocked", unlocked + 1, cost), true);
+        player.displayClientMessage(Component.translatable("message.apoth_talisman_bag.slot_unlocked", unlocked + 1, cost), true);
         return true;
     }
 
     public static int getUnlockedSlots(ItemStack stack) {
-        CompoundTag tag = stack.m_41784_();
-        int slots = tag.m_128451_(TAG_UNLOCKED);
+        CompoundTag tag = stack.getOrCreateTag();
+        int slots = tag.getInt(TAG_UNLOCKED);
         if (slots < 0) return 0;
         return Math.min(slots, MAX_SLOTS);
     }
 
     public static void setUnlockedSlots(ItemStack stack, int slots) {
-        stack.m_41784_().m_128405_(TAG_UNLOCKED, Math.max(0, Math.min(slots, MAX_SLOTS)));
+        stack.getOrCreateTag().putInt(TAG_UNLOCKED, Math.max(0, Math.min(slots, MAX_SLOTS)));
     }
 
     public static boolean hasStoredItemsFast(ItemStack stack) {
-        if (stack.m_41619_()) return false;
-        CompoundTag tag = stack.m_41784_();
-        int unlocked = tag.m_128451_(TAG_UNLOCKED);
+        if (stack.isEmpty()) return false;
+        CompoundTag tag = stack.getOrCreateTag();
+        int unlocked = tag.getInt(TAG_UNLOCKED);
         if (unlocked <= 0) return false;
-        return tag.m_128437_(TAG_ITEMS, 10).size() > 0;
+        if (!tag.contains(TAG_ITEMS, Tag.TAG_LIST)) return false;
+        return tag.getList(TAG_ITEMS, Tag.TAG_COMPOUND).size() > 0;
+    }
+
+    private static void initApotheosisReflection() {
+        if (apotheosisReflectionTried) return;
+        apotheosisReflectionTried = true;
+
+        String[] classNames = {
+                "dev.shadowsoffire.apotheosis.potion.PotionCharmItem",
+                "dev.shadowsoffire.apotheosis.item.PotionCharmItem"
+        };
+
+        for (String className : classNames) {
+            try {
+                potionCharmItemClass = Class.forName(className);
+                potionCharmHasEffectMethod = potionCharmItemClass.getMethod("hasEffect", ItemStack.class);
+                return;
+            }
+            catch (Throwable ignored) {
+                potionCharmItemClass = null;
+                potionCharmHasEffectMethod = null;
+            }
+        }
     }
 
     public static boolean isPotionCharm(ItemStack stack) {
-        return !stack.m_41619_() && stack.m_41720_() instanceof PotionCharmItem && PotionCharmItem.hasEffect(stack);
+        if (stack.isEmpty()) return false;
+        initApotheosisReflection();
+        if (potionCharmItemClass == null || potionCharmHasEffectMethod == null) return false;
+        if (!potionCharmItemClass.isInstance(stack.getItem())) return false;
+        try {
+            Object result = potionCharmHasEffectMethod.invoke(null, stack);
+            return Boolean.TRUE.equals(result);
+        }
+        catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    public static void enableCharm(ItemStack stack) {
+        if (!stack.isEmpty()) {
+            stack.getOrCreateTag().putBoolean("charm_enabled", true);
+        }
     }
 
     public static ItemStack createLockedVisual() {
@@ -104,46 +148,48 @@ public class TalismanBagItem extends Item {
     }
 
     public static boolean isLockedVisual(ItemStack stack) {
-        return !stack.m_41619_() && stack.m_41720_() == ApothTalismanBag.LOCKED_SLOT.get();
+        return !stack.isEmpty() && stack.getItem() == ApothTalismanBag.LOCKED_SLOT.get();
     }
 
     public static void loadItems(ItemStack bag, TalismanBagContainer container) {
-        CompoundTag tag = bag.m_41784_();
-        ListTag list = tag.m_128437_(TAG_ITEMS, 10);
+        if (bag.isEmpty()) return;
+        CompoundTag tag = bag.getOrCreateTag();
+        ListTag list = tag.getList(TAG_ITEMS, Tag.TAG_COMPOUND);
 
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag itemTag = list.m_128728_(i);
-            int slot = itemTag.m_128445_("Slot") & 255;
+            CompoundTag itemTag = list.getCompound(i);
+            int slot = itemTag.getByte("Slot") & 255;
             if (slot >= 0 && slot < MAX_SLOTS) {
-                container.setItemSilently(slot, ItemStack.m_41712_(itemTag));
+                container.setItemSilently(slot, ItemStack.of(itemTag));
             }
         }
     }
 
     public static void saveItems(ItemStack bag, TalismanBagContainer container) {
+        if (bag.isEmpty()) return;
         ListTag list = new ListTag();
         int unlocked = getUnlockedSlots(bag);
         for (int slot = 0; slot < Math.min(unlocked, MAX_SLOTS); slot++) {
-            ItemStack stack = container.m_8020_(slot);
+            ItemStack stack = container.getItem(slot);
             if (isPotionCharm(stack)) {
                 CompoundTag itemTag = new CompoundTag();
-                itemTag.m_128344_("Slot", (byte) slot);
-                stack.m_41739_(itemTag);
-                list.m_7614_(list.size(), itemTag);
+                itemTag.putByte("Slot", (byte) slot);
+                stack.save(itemTag);
+                list.add(itemTag);
             }
         }
-        bag.m_41784_().m_128365_(TAG_ITEMS, list);
+        bag.getOrCreateTag().put(TAG_ITEMS, list);
     }
 
     @Override
-    public void m_7373_(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
         int unlocked = getUnlockedSlots(stack);
-        tooltip.add(Component.m_237110_("tooltip.apoth_talisman_bag.unlocked", unlocked, MAX_SLOTS));
+        tooltip.add(Component.translatable("tooltip.apoth_talisman_bag.unlocked", unlocked, MAX_SLOTS));
         if (unlocked < MAX_SLOTS) {
             int cost = (unlocked + 1) * 100;
-            tooltip.add(Component.m_237110_("tooltip.apoth_talisman_bag.next_cost", cost));
+            tooltip.add(Component.translatable("tooltip.apoth_talisman_bag.next_cost", cost));
         }
-        tooltip.add(Component.m_237115_("tooltip.apoth_talisman_bag.open"));
-        tooltip.add(Component.m_237115_("tooltip.apoth_talisman_bag.unlock"));
+        tooltip.add(Component.translatable("tooltip.apoth_talisman_bag.open"));
+        tooltip.add(Component.translatable("tooltip.apoth_talisman_bag.unlock"));
     }
 }
