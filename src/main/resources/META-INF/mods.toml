@@ -1,0 +1,34 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="apoth_talisman_bag"
+version="1.0.7"
+displayName="Apotheosis Amulet Bag"
+description='''
+A Forge 1.20.1 addon for Apotheosis: a 5-slot amulet bag for Apotheosis potion charms.
+Slots unlock with player levels: 100, 200, 300, 400, 500.
+'''
+authors="NOSFERATU + ChatGPT"
+
+[[dependencies.apoth_talisman_bag]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.apoth_talisman_bag]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.apoth_talisman_bag]]
+modId="apotheosis"
+mandatory=true
+versionRange="[7.0.0,)"
+ordering="AFTER"
+side="BOTH"
