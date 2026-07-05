@@ -1,22 +1,47 @@
-# Apotheosis Amulet Bag - Forge 1.20.1
+Apotheosis Amulet Bag
 
-Forge 1.20.1 port of Amulet Bag, an Apotheosis addon with a 5-slot amulet bag.
+Apotheosis Amulet Bag is a small Forge addon for Apotheosis on Minecraft 1.20.1 that adds a dedicated bag for Apotheosis amulets.
 
-This repository is separate from the NeoForge 1.21.1 version so the ports do not mix resources, mappings, or build setup.
+The bag is designed to keep several Apotheosis charms in one item while still allowing their effects to work from inside the bag.
 
-## Status
+Features
 
-Initial Forge 1.20.1 workspace. Based on the older working 1.20.1 source and intended for testing before CurseForge release.
+Adds an Amulet Bag item
+Supports up to 5 amulet slots
 
-## Features
+Slots are unlocked with player experience levels:
+Slot 1: 100 levels
+Slot 2: 200 levels
+Slot 3: 300 levels
+Slot 4: 400 levels
+Slot 5: 500 levels
 
-- Amulet Bag item for Apotheosis potion charms.
-- 5 slots.
-- Slot unlock costs: 100, 200, 300, 400, 500 player levels.
-- Only Apotheosis potion charms can be inserted.
-- Locked slots use a visual placeholder item.
-- Effects from charms inside unlocked slots are ticked from the bag.
+Only Apotheosis amulets can be placed inside
+Charm effects remain active while stored in unlocked slots
+Locked slots are shown visually in the bag GUI
+Works from the player inventory
+Optional Curios support for the charm slot, if Curios is installed
 
-## Notes
+Notes
 
-Only one bag should be active per player to avoid stacking effects from multiple bags.
+This mod was made for servers and modpacks where Apotheosis charms are commonly used and players need a cleaner way to manage them.
+
+The mod is intentionally small and focused: it only adds the Amulet Bag and does not change Apotheosis progression or charm mechanics directly.
+
+Only one Amulet Bag is active per player, so multiple bags cannot be used to stack charm effects.
+
+Controls
+
+Right Click — open the Amulet Bag
+Shift + Right Click — unlock the next slot if you have enough levels
+
+Requirements
+
+Minecraft 1.20.1
+Forge
+Apotheosis
+Curios API is optional
+
+Item ID
+
+/give @p apoth_talisman_bag:talisman_bag
